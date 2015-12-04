@@ -1,27 +1,25 @@
 'use strict';
 
-let React = require('react-native');
+const React = require('react-native');
 
-let {
-  View,
-  Component,
+const {
   requireNativeComponent,
   PropTypes,
   DeviceEventEmitter,
   NativeModules,
-  Image
 } = React;
 
-var RNGMapsModule = NativeModules.RNGMapsModule;
+const RNGMapsModule = NativeModules.RNGMapsModule;
 
 /* RNGMAPS COMP */
-var gmaps = {
+const gmaps = {
   name: 'RNGMapsViewManager',
   propTypes: {
     center: PropTypes.object,
     zoomLevel: PropTypes.number,
     markers: PropTypes.array,
     zoomOnMarkers: PropTypes.bool,
+    centerNextLocationFix: PropTypes.bool,
 
     /* Hackedy hack hack hack */
     scaleX: React.PropTypes.number,
@@ -34,17 +32,15 @@ var gmaps = {
 
 let MapView = requireNativeComponent('RNGMapsViewManager', gmaps);
 
-class RNGMaps extends Component {
-  constructor (props) {
+class RNGMaps extends React.Component {
+  constructor(props) {
     super(props);
     this._event = null;
-    this.state = {
-      zoomOnMarkers: false,
-      markers: []
-    }
+    this._error = null;
+    this._markerClick = null;
+    this._onMarkerClick = this._onMarkerClick.bind(this);
   }
-
-  componentDidMount () {
+  componentDidMount() {
     this._event = DeviceEventEmitter.addListener('mapChange', (e: Event) => {
       this.props.onMapChange&&this.props.onMapChange(e);
     });
@@ -54,55 +50,29 @@ class RNGMaps extends Component {
       this.props.onMapError&&this.props.onMapError(e);
     });
 
-    this.updateMarkers(this.props.markers);
+    this._markerClick = DeviceEventEmitter.addListener('markerClick',this._onMarkerClick);
+  }
+  componentWillUnmount() {
+    this._event && this._event.remove();
+    this._error && this._error.remove();
+    this._markerClick && this._markerClick.remove();
+  }
+  componentWillReceiveProps(nextProps) {
   }
 
-  componentWillUnmount () {
-    this._event&&this._event.remove();
-    this._error&&this._error.remove();
-  }
-
-
-  zoomOnMarkers (bool) {
-    // HACK: Bleurgh, forcing the change on zoomOnMarkers.
-    this.setState({ zoomOnMarkers: null }, () => {
-      this.setState({ zoomOnMarkers: bool||true });
+  _onMarkerClick(e) {
+    const marker = this.props.markers.find((m) => {
+      return e.id == m.id;
     });
-  }
-
-  addMarker (marker) {
-    RNGMapsModule.addMarker(marker);
-  }
-
-  updateMarkers (markers) {
-    let newMarkers = [];
-    for (var i = 0; i < markers.length; i++) newMarkers.push(markers[i]);
-    this.setState({ markers: newMarkers });
-  }
-
-  _diffMarkers (markersOne, markersTwo) {
-    if(markersOne.length!==markersTwo.length) return true;
-    for (let i = 0; i < markersOne.length; i++) {
-      for (let prop in markersOne[i].coordinates) {
-        if (markersOne[i].coordinates.hasOwnProperty(prop)) {
-          if(markersOne[i].coordinates[prop] !== markersTwo[i].coordinates[prop]) return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  componentWillReceiveProps (nextProps) {
-    if(this._diffMarkers(nextProps.markers, this.state.markers)) {
-      this.updateMarkers(nextProps.markers);
+    if (marker && marker.onRightCalloutPress) {
+      marker.onRightCalloutPress(e);
     }
   }
 
   render () {
-    return ( <MapView
-      { ...this.props }
-      markers={ this.state.markers }
-      zoomOnMarkers={ this.state.zoomOnMarkers }
+    return (
+      <MapView
+        {...this.props}
       />
     );
   }
