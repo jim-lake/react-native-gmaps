@@ -1,7 +1,10 @@
 
 package com.rota.rngmaps;
 
+import android.app.Activity;
+import android.app.Dialog;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.location.Criteria;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -21,6 +24,8 @@ import com.facebook.react.uimanager.ReactProp;
 import com.facebook.react.uimanager.SimpleViewManager;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.UIProp;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.maps.*;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
@@ -82,8 +87,23 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
         return map;
     }
     @Override
-    protected MapView createViewInstance(ThemedReactContext context) {
+    protected MapView createViewInstance(final ThemedReactContext context) {
         reactContext = context;
+
+        final GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        final int resultCode = apiAvailability.isGooglePlayServicesAvailable(context);
+        if (resultCode != ConnectionResult.SUCCESS) {
+            Context c = context;
+            while (c != null
+                && c instanceof ContextWrapper
+                && !(c instanceof Activity)) {
+                c = ((ContextWrapper)c).getBaseContext();
+            }
+            final Dialog dialog = apiAvailability.getErrorDialog((Activity)c,resultCode, 69);
+            if (dialog != null) {
+                dialog.show();
+            }
+        }
         locationManager = (LocationManager)context.getSystemService(Context.LOCATION_SERVICE);
         final Criteria criteria = new Criteria();
         locationProvider = locationManager.getBestProvider(criteria, false);
@@ -139,7 +159,11 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
 
             map.setMyLocationEnabled(true);
             map.setOnInfoWindowClickListener(this);
-            map.getUiSettings().setMyLocationButtonEnabled(this.showMyLocationButton);
+            final UiSettings uiSettings = map.getUiSettings();
+            uiSettings.setRotateGesturesEnabled(false);
+            uiSettings.setMapToolbarEnabled(false);
+            uiSettings.setTiltGesturesEnabled(false);
+            uiSettings.setMyLocationButtonEnabled(this.showMyLocationButton);
             updateMapPadding();
             updateCamera(null);
             Log.i("Foo","Map Ready");
