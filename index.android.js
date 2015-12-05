@@ -7,7 +7,10 @@ const {
   PropTypes,
   DeviceEventEmitter,
   NativeModules,
+  Dimensions,
 } = React;
+
+const { width } = Dimensions.get("window");
 
 const RNGMapsModule = NativeModules.RNGMapsModule;
 
@@ -20,6 +23,8 @@ const gmaps = {
     markers: PropTypes.array,
     zoomOnMarkers: PropTypes.bool,
     centerNextLocationFix: PropTypes.bool,
+    mapPadding: PropTypes.object,
+    showMyLocationButton: PropTypes.bool,
 
     /* Hackedy hack hack hack */
     scaleX: React.PropTypes.number,
@@ -39,15 +44,23 @@ class RNGMaps extends React.Component {
     this._error = null;
     this._markerClick = null;
     this._onMarkerClick = this._onMarkerClick.bind(this);
+    this._onMapChange = this._onMapChange.bind(this);
   }
+  static propTypes = {
+    onRegionChangeComplete: React.PropTypes.func,
+    onMapError: React.PropTypes.func,
+  };
+  static defaultProps = {
+    onRegionChangeComplete: function() {},
+    onMapError: function() {},
+  };
+
   componentDidMount() {
-    this._event = DeviceEventEmitter.addListener('mapChange', (e: Event) => {
-      this.props.onMapChange&&this.props.onMapChange(e);
-    });
+    this._event = DeviceEventEmitter.addListener('mapChange',this._onMapChange);
 
     this._error = DeviceEventEmitter.addListener('mapError', (e: Event) => {
       console.log(`[GMAP_ERROR]: ${e.message}`);
-      this.props.onMapError&&this.props.onMapError(e);
+      this.props.onMapError(e);
     });
 
     this._markerClick = DeviceEventEmitter.addListener('markerClick',this._onMarkerClick);
@@ -60,19 +73,44 @@ class RNGMaps extends React.Component {
   componentWillReceiveProps(nextProps) {
   }
 
+  _onMapChange(e) {
+    console.log(e);
+    this.props.onRegionChangeComplete(e);
+  }
+
   _onMarkerClick(e) {
-    const marker = this.props.markers.find((m) => {
+    const marker = this.props.annotations.find((m) => {
       return e.id == m.id;
     });
+    console.log("marker:",marker);
     if (marker && marker.onRightCalloutPress) {
       marker.onRightCalloutPress(e);
     }
   }
 
   render () {
+    let { region, annotations, zoomLevel, ...other } = this.props;
+
+    if (region && region.longitude && region.longitudeDelta) {
+      const GLOBE_WIDTH = 256;
+      const west = region.longitude - region.longitudeDelta/2;
+      const east = region.longitude + region.longitudeDelta/2;
+      let angle = east - west;
+      if (angle < 0) {
+        angle += 360;
+      }
+      region.zoomLevel = Math.log(width * 360 / angle / GLOBE_WIDTH) / Math.LN2;
+    }
+    if (region && region.zoomLevel) {
+      zoomLevel = undefined;
+    }
+
     return (
       <MapView
-        {...this.props}
+        markers={annotations}
+        center={region}
+        zoomLevel={zoomLevel}
+        {...other}
       />
     );
   }

@@ -49,12 +49,17 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
     private MapView mView;
     private GoogleMap map;
     private ReactContext reactContext;
-    private int zoomLevel = -1;
+    private float zoomLevel = -1;
     private ArrayList<Marker> mapMarkers = new ArrayList<Marker>();
     private HashMap<String,String> markerIdMap = new HashMap<String, String>();
+    private int mapPaddingLeft = 0;
+    private int mapPaddingRight = 0;
+    private int mapPaddingTop = 0;
+    private int mapPaddingBottom = 0;
 
     private boolean centerNextLocationFix = false;
     private boolean zoomNeedsUpdate = false;
+    private boolean showMyLocationButton = false;
 
     @UIProp(UIProp.Type.MAP)
     public static final String PROP_CENTER = "center";
@@ -124,8 +129,6 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
         if (map == null) {
             sendMapError("Map is null", "map_null");
         } else {
-            map.getUiSettings().setMyLocationButtonEnabled(false);
-
             try {
                 MapsInitializer.initialize(reactContext.getApplicationContext());
                 map.setOnCameraChangeListener(this);
@@ -136,6 +139,8 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
 
             map.setMyLocationEnabled(true);
             map.setOnInfoWindowClickListener(this);
+            map.getUiSettings().setMyLocationButtonEnabled(this.showMyLocationButton);
+            updateMapPadding();
             updateCamera(null);
             Log.i("Foo","Map Ready");
         }
@@ -152,13 +157,10 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
     }
 
     @Override
-    public void onCameraChange(CameraPosition position) {
+    public void onCameraChange(final CameraPosition position) {
         WritableMap params = Arguments.createMap();
-        WritableMap latLng = Arguments.createMap();
-        latLng.putDouble("latitude", position.target.latitude);
-        latLng.putDouble("longitude", position.target.longitude);
-
-        params.putMap("latLng", latLng);
+        params.putDouble("latitude", position.target.latitude);
+        params.putDouble("longitude", position.target.longitude);
         params.putDouble("zoomLevel", position.zoom);
 
         reactContext
@@ -168,12 +170,23 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
 
     @ReactProp(name = "center")
     public void setCenter(final MapView view,ReadableMap region) {
-        try {
-            Double lng = region.getDouble("longitude");
-            Double lat = region.getDouble("latitude");
-
-            map.animateCamera(CameraUpdateFactory.newLatLng(new LatLng(lat,lng)));
-        } catch (Exception e) {
+        Log.i("Map", "setCenter: region:" + region);
+        if (region != null) {
+            try {
+                final Double lng = region.getDouble("longitude");
+                final Double lat = region.getDouble("latitude");
+                CameraUpdate update;
+                if (region.hasKey("zoomLevel")) {
+                    final Double zoomLevel = region.getDouble("zoomLevel");
+                    update = CameraUpdateFactory.newLatLngZoom(new LatLng(lat, lng), zoomLevel.floatValue());
+                } else {
+                    update = CameraUpdateFactory.newLatLng(new LatLng(lat, lng));
+                }
+                Log.i("Map", "setCenter: animateCamera:" + update);
+                map.animateCamera(update);
+            } catch (Exception e) {
+                Log.e("Map", "Failed to update center: " + e);
+            }
         }
     }
 
@@ -210,7 +223,7 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
         }
 
         final Marker marker = map.addMarker(options);
-        markerIdMap.put(marker.getId(),config.getString("id"));
+        markerIdMap.put(marker.getId(), config.getString("id"));
         return marker;
     }
     @Override
@@ -221,7 +234,7 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
             params.putString("id",id);
             reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                .emit("markerClick",params);
+                .emit("markerClick", params);
         }
     }
 
@@ -249,14 +262,20 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
             }
             if (location != null && this.zoomNeedsUpdate) {
                 final LatLng latLng = new LatLng(location.getLatitude(),location.getLongitude());
-                map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel));
+                final CameraUpdate update = CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel);
+                Log.i("Map", "updateCamera: animateCamera:" + update);
+                map.animateCamera(update);
                 this.centerNextLocationFix = false;
             } else if (location != null) {
                 final LatLng latLng = new LatLng(location.getLatitude(),location.getLongitude());
-                map.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                final CameraUpdate update = CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel);
+                Log.i("Map", "updateCamera: animateCamera:" + update);
+                map.animateCamera(update);
                 this.centerNextLocationFix = false;
             } else if (this.zoomNeedsUpdate) {
-                map.moveCamera(CameraUpdateFactory.zoomTo(zoomLevel));
+                final CameraUpdate update = CameraUpdateFactory.zoomTo(zoomLevel);
+                Log.i("Map", "updateCamera: moveCamera:" + update);
+                map.moveCamera(update);
             }
             this.zoomNeedsUpdate = false;
         }
@@ -264,9 +283,48 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
     }
 
     @ReactProp(name = "zoomLevel")
-    public void setZoomLevel(final MapView view,final int zoom) {
-        zoomLevel = zoom;
-        zoomNeedsUpdate = true;
-        updateCamera(null);
+    public void setZoomLevel(final MapView view,final Integer zoom) {
+        Log.i("Map","setZoomLevel:" + zoom);
+        if (zoom != null) {
+            zoomLevel = zoom;
+            zoomNeedsUpdate = true;
+            updateCamera(null);
+        }
+    }
+    @ReactProp(name = "mapPadding")
+    public void setMapPadding(final MapView view,final ReadableMap padding) {
+        mapPaddingLeft = 0;
+        mapPaddingRight = 0;
+        mapPaddingTop = 0;
+        mapPaddingBottom = 0;
+        if (padding != null) {
+            if (padding.hasKey("left")) {
+                mapPaddingLeft = padding.getInt("left");
+            }
+            if (padding.hasKey("right")) {
+                mapPaddingRight = padding.getInt("right");
+            }
+            if (padding.hasKey("top")) {
+                mapPaddingTop = padding.getInt("top");
+            }
+            if (padding.hasKey("bottom")) {
+                mapPaddingBottom = padding.getInt("bottom");
+            }
+            updateMapPadding();
+        }
+    }
+    private void updateMapPadding() {
+        if (map != null) {
+            map.setPadding(mapPaddingLeft, mapPaddingTop, mapPaddingRight, mapPaddingBottom);
+        }
+    }
+    @ReactProp(name = "showMyLocationButton")
+    public void setShowMyLocationButton(final MapView view,final Boolean show) {
+        if (show != null) {
+            this.showMyLocationButton = show;
+            if (map != null ) {
+                map.getUiSettings().setMyLocationButtonEnabled(this.showMyLocationButton);
+            }
+        }
     }
 }
