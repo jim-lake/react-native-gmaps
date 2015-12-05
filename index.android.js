@@ -8,6 +8,7 @@ const {
   DeviceEventEmitter,
   NativeModules,
   Dimensions,
+  PixelRatio,
 } = React;
 
 const { width } = Dimensions.get("window");
@@ -89,7 +90,7 @@ class RNGMaps extends React.Component {
   }
 
   render () {
-    let { region, annotations, zoomLevel, ...other } = this.props;
+    let { region, annotations, zoomLevel, mapPadding, ...other } = this.props;
 
     if (region && region.longitude && region.longitudeDelta) {
       const GLOBE_WIDTH = 256;
@@ -104,12 +105,21 @@ class RNGMaps extends React.Component {
     if (region && region.zoomLevel) {
       zoomLevel = undefined;
     }
+    if (mapPadding) {
+      ["top","bottom","left","right"].forEach((prop) => {
+        const val = mapPadding[prop];
+        if (val) {
+          mapPadding[prop] = PixelRatio.getPixelSizeForLayoutSize(val);
+        }
+      });
+    }
 
     return (
       <MapView
         markers={annotations}
         center={region}
         zoomLevel={zoomLevel}
+        mapPadding={mapPadding}
         {...other}
       />
     );
