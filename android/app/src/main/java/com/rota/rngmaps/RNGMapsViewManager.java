@@ -151,19 +151,22 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
         } else {
             try {
                 MapsInitializer.initialize(reactContext.getApplicationContext());
+                final LatLng loc = new LatLng(34.0500,-118.2500);
+                final CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(loc,10);
+                map.moveCamera(cameraUpdate);
+                final UiSettings uiSettings = map.getUiSettings();
+                uiSettings.setRotateGesturesEnabled(false);
+                uiSettings.setMapToolbarEnabled(false);
+                uiSettings.setTiltGesturesEnabled(false);
+                uiSettings.setMyLocationButtonEnabled(this.showMyLocationButton);
+
                 map.setOnCameraChangeListener(this);
+                map.setMyLocationEnabled(true);
+                map.setOnInfoWindowClickListener(this);
             } catch (Exception e) {
                 e.printStackTrace();
                 sendMapError("Map initialize error", "map_init_error");
             }
-
-            map.setMyLocationEnabled(true);
-            map.setOnInfoWindowClickListener(this);
-            final UiSettings uiSettings = map.getUiSettings();
-            uiSettings.setRotateGesturesEnabled(false);
-            uiSettings.setMapToolbarEnabled(false);
-            uiSettings.setTiltGesturesEnabled(false);
-            uiSettings.setMyLocationButtonEnabled(this.showMyLocationButton);
             updateMapPadding();
             updateCamera(null);
             Log.i("Foo","Map Ready");
