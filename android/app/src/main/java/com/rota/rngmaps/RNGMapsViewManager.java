@@ -151,7 +151,7 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
         } else {
             try {
                 MapsInitializer.initialize(reactContext.getApplicationContext());
-                final LatLng loc = new LatLng(34.0500,-118.2500);
+                final LatLng loc = new LatLng(34.0625,-118.2448);
                 final CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(loc,10);
                 map.moveCamera(cameraUpdate);
                 final UiSettings uiSettings = map.getUiSettings();
