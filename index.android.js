@@ -47,14 +47,6 @@ class RNGMaps extends React.Component {
     this._onMarkerClick = this._onMarkerClick.bind(this);
     this._onMapChange = this._onMapChange.bind(this);
   }
-  static propTypes = {
-    onRegionChangeComplete: React.PropTypes.func,
-    onMapError: React.PropTypes.func,
-  };
-  static defaultProps = {
-    onRegionChangeComplete: function() {},
-    onMapError: function() {},
-  };
 
   componentDidMount() {
     this._event = DeviceEventEmitter.addListener('mapChange',this._onMapChange);
@@ -125,5 +117,15 @@ class RNGMaps extends React.Component {
     );
   }
 }
+
+RNGMaps.propTypes = {
+  onRegionChangeComplete: React.PropTypes.func,
+  onMapError: React.PropTypes.func,
+};
+RNGMaps.defaultProps = {
+  onRegionChangeComplete: function() {},
+  onMapError: function() {},
+};
+
 
 module.exports = RNGMaps;
