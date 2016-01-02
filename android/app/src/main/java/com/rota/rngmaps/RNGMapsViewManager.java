@@ -169,7 +169,6 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
             }
             updateMapPadding();
             updateCamera(null);
-            Log.i("Foo","Map Ready");
         }
     }
 
@@ -197,7 +196,6 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
 
     @ReactProp(name = "center")
     public void setCenter(final MapView view,ReadableMap region) {
-        Log.i("Map", "setCenter: region:" + region);
         if (region != null) {
             try {
                 final Double lng = region.getDouble("longitude");
@@ -209,7 +207,6 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
                 } else {
                     update = CameraUpdateFactory.newLatLng(new LatLng(lat, lng));
                 }
-                Log.i("Map", "setCenter: animateCamera:" + update);
                 map.animateCamera(update);
             } catch (Exception e) {
                 Log.e("Map", "Failed to update center: " + e);
@@ -290,18 +287,15 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
             if (location != null && this.zoomNeedsUpdate) {
                 final LatLng latLng = new LatLng(location.getLatitude(),location.getLongitude());
                 final CameraUpdate update = CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel);
-                Log.i("Map", "updateCamera: animateCamera:" + update);
                 map.animateCamera(update);
                 this.centerNextLocationFix = false;
             } else if (location != null) {
                 final LatLng latLng = new LatLng(location.getLatitude(),location.getLongitude());
                 final CameraUpdate update = CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel);
-                Log.i("Map", "updateCamera: animateCamera:" + update);
                 map.animateCamera(update);
                 this.centerNextLocationFix = false;
             } else if (this.zoomNeedsUpdate) {
                 final CameraUpdate update = CameraUpdateFactory.zoomTo(zoomLevel);
-                Log.i("Map", "updateCamera: moveCamera:" + update);
                 map.moveCamera(update);
             }
             this.zoomNeedsUpdate = false;
@@ -311,7 +305,6 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
 
     @ReactProp(name = "zoomLevel")
     public void setZoomLevel(final MapView view,final Integer zoom) {
-        Log.i("Map","setZoomLevel:" + zoom);
         if (zoom != null) {
             zoomLevel = zoom;
             zoomNeedsUpdate = true;
