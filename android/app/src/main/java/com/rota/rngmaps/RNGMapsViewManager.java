@@ -107,7 +107,7 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
         locationManager = (LocationManager)context.getSystemService(Context.LOCATION_SERVICE);
         final Criteria criteria = new Criteria();
         locationProvider = locationManager.getBestProvider(criteria, false);
-        locationManager.requestLocationUpdates(locationProvider,400,1,this);
+        if (locationManager != null && locationProvider != null) locationManager.requestLocationUpdates(locationProvider, 400, 1, this);
 
         context.addLifecycleEventListener(this);
 
@@ -120,7 +120,7 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
     @Override
     public void onHostResume() {
         if (map != null) map.setMyLocationEnabled(true);
-        if (locationManager != null) locationManager.requestLocationUpdates(locationProvider, 400, 1, this);
+        if (locationManager != null && locationProvider != null) locationManager.requestLocationUpdates(locationProvider, 400, 1, this);
     }
     @Override
     public void onHostPause() {
@@ -278,7 +278,7 @@ public class RNGMapsViewManager extends SimpleViewManager<MapView>
                         // Ignore
                     }
                 }
-                if (location == null) {
+                if (location == null && locationProvider != null) {
                     location = locationManager.getLastKnownLocation(locationProvider);
                 }
             } else {
